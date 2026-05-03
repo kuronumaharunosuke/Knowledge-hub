@@ -17,7 +17,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
 <style>
 /* ===========================================================
@@ -641,28 +640,6 @@ main.content { min-width: 0; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
-.file-drop {
-  border: 2px dashed var(--gray-200);
-  border-radius: var(--radius);
-  padding: 28px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: var(--transition);
-}
-.file-drop:hover, .file-drop.drag-over {
-  border-color: var(--aiesec-blue);
-  background: var(--aiesec-blue-light);
-}
-.file-drop svg { width: 36px; height: 36px; color: var(--gray-700); margin-bottom: 8px; }
-.file-drop p { font-size: 13px; color: var(--gray-700); }
-.file-drop strong { color: var(--aiesec-blue); }
-.file-selected {
-  background: var(--aiesec-blue-light);
-  border-color: var(--aiesec-blue);
-  color: var(--aiesec-blue);
-}
-.file-selected strong { color: var(--aiesec-blue); }
-
 .tag-input-wrap {
   display: flex; flex-wrap: wrap; gap: 6px;
   padding: 8px;
@@ -987,29 +964,10 @@ main.content { min-width: 0; }
     </div>
     <div class="modal-body">
 
-      <div class="tabs">
-        <button class="tab active" onclick="switchSourceTab('link', this)">🔗 リンクで追加</button>
-        <button class="tab" onclick="switchSourceTab('file', this)">📎 ファイルアップロード</button>
-      </div>
-
-      <div class="tab-panel active" id="panel-link">
-        <div class="form-group">
-          <label class="form-label">URL <span class="req">*</span></label>
-          <input class="form-input" id="f_url" placeholder="https://..." />
-          <div class="form-help">Google Drive、Notion、Slack、外部サイトなど何でも</div>
-        </div>
-      </div>
-
-      <div class="tab-panel" id="panel-file">
-        <div class="form-group">
-          <label class="form-label">ファイル <span class="req">*</span></label>
-          <div class="file-drop" id="fileDrop" onclick="document.getElementById('f_file').click()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-            <p id="fileDropText"><strong>クリックしてファイルを選択</strong>またはドラッグ&ドロップ</p>
-            <input type="file" id="f_file" style="display:none" onchange="handleFileSelect(event)" />
-          </div>
-          <div class="form-help">最大 50MB / PDF, PPTX, DOCX, XLSX, 画像など</div>
-        </div>
+      <div class="form-group">
+        <label class="form-label">URL <span class="req">*</span></label>
+        <input class="form-input" id="f_url" placeholder="https://..." />
+        <div class="form-help">Google Drive・Notion・Slack・スプレッドシート・外部サイトなど何でもOK</div>
       </div>
 
       <div class="form-group">
@@ -1138,21 +1096,21 @@ main.content { min-width: 0; }
    1. FIREBASE CONFIG  ←←← ここを差し替えてください
    =========================================================== */
 const firebaseConfig = {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME"
+  apiKey: "AIzaSyAYO_dz3VJVtimeAIxHW7RrUgLt6an6be0",
+  authDomain: "knowledge-hub-1c17c.firebaseapp.com",
+  projectId: "knowledge-hub-1c17c",
+  storageBucket: "knowledge-hub-1c17c.firebasestorage.app",
+  messagingSenderId: "631729971984",
+  appId: "1:631729971984:web:1ccc52b4cf9ab06c1b3b95",
+  measurementId: "G-BZB1D1GE4T"
 };
 
 const ALLOWED_DOMAIN = "aiesec.jp"; // @aiesec.jp 限定
-const FIRST_TIME_BOOTSTRAP_ADMIN = ""; // 初回セットアップ時、ここに自分のメールを入れて1回起動 → 設定で消す
+const FIRST_TIME_BOOTSTRAP_ADMIN = "kuronuma.harunosuke@aiesec.jp"; // 初回セットアップ時、ここに自分のメールを入れて1回起動 → 設定で消す
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 /* ===========================================================
    2. STATE
@@ -1173,9 +1131,7 @@ let materials = [];
 let settings = { terms: [], areas: [], admins: [] };
 let filters = { term: null, area: null, type: null, tag: null, search: '', mine: false };
 let editingId = null;
-let editingFile = null;
 let editingTags = [];
-let activeSourceTab = 'link';
 let unsubscribeMaterials = null;
 
 /* ===========================================================
@@ -1440,17 +1396,10 @@ function renderCard(m) {
    =========================================================== */
 function openAddModal(material) {
   editingId = material?.id || null;
-  editingFile = null;
   editingTags = material?.tags ? material.tags.slice() : [];
-  activeSourceTab = material?.storagePath ? 'file' : 'link';
 
   document.getElementById('addModalTitle').textContent = material ? '資料を編集' : '資料を追加';
   document.getElementById('saveBtnText').textContent = material ? '更新' : '保存';
-
-  // Tabs
-  document.querySelectorAll('#addModal .tab').forEach((t, i) => t.classList.toggle('active', (i === 0 && activeSourceTab === 'link') || (i === 1 && activeSourceTab === 'file')));
-  document.getElementById('panel-link').classList.toggle('active', activeSourceTab === 'link');
-  document.getElementById('panel-file').classList.toggle('active', activeSourceTab === 'file');
 
   // Fill term/area dropdowns
   const termSel = document.getElementById('f_term');
@@ -1461,64 +1410,16 @@ function openAddModal(material) {
   // Fields
   document.getElementById('f_title').value = material?.title || '';
   document.getElementById('f_desc').value = material?.description || '';
-  document.getElementById('f_url').value = (material && !material.storagePath) ? (material.url || '') : '';
+  document.getElementById('f_url').value = material?.url || '';
   document.getElementById('f_term').value = material?.term || (settings.terms[0] || '');
   document.getElementById('f_area').value = material?.area || (settings.areas[0]?.name || '');
   document.getElementById('f_type').value = material?.type || 'document';
-
-  // File state
-  const drop = document.getElementById('fileDrop');
-  drop.classList.remove('file-selected');
-  if (material?.storagePath) {
-    document.getElementById('fileDropText').innerHTML = `<strong>${escapeHTML(material.fileName || 'ファイル')}</strong><br/><small>変更しない場合はこのまま保存</small>`;
-    drop.classList.add('file-selected');
-  } else {
-    document.getElementById('fileDropText').innerHTML = `<strong>クリックしてファイルを選択</strong>またはドラッグ&ドロップ`;
-  }
-  document.getElementById('f_file').value = '';
 
   renderTagsInput();
   document.getElementById('addModal').classList.add('open');
   setTimeout(() => document.getElementById('f_title').focus(), 50);
 }
 function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
-
-function switchSourceTab(which, btn) {
-  activeSourceTab = which;
-  document.querySelectorAll('#addModal .tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('panel-link').classList.toggle('active', which === 'link');
-  document.getElementById('panel-file').classList.toggle('active', which === 'file');
-}
-
-function handleFileSelect(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (file.size > 50 * 1024 * 1024) {
-    toast("ファイルサイズが大きすぎます (最大50MB)", "error");
-    e.target.value = '';
-    return;
-  }
-  editingFile = file;
-  const drop = document.getElementById('fileDrop');
-  drop.classList.add('file-selected');
-  document.getElementById('fileDropText').innerHTML = `<strong>${escapeHTML(file.name)}</strong><br/><small>${(file.size/1024/1024).toFixed(2)} MB</small>`;
-}
-
-['dragover','dragleave','drop'].forEach(evt => {
-  document.addEventListener('DOMContentLoaded', () => {
-    const drop = document.getElementById('fileDrop');
-    drop.addEventListener(evt, e => {
-      e.preventDefault();
-      if (evt === 'dragover') drop.classList.add('drag-over');
-      else drop.classList.remove('drag-over');
-      if (evt === 'drop' && e.dataTransfer.files[0]) {
-        document.getElementById('f_file').files = e.dataTransfer.files;
-        handleFileSelect({ target: { files: e.dataTransfer.files, value: '' } });
-      }
-    });
-  });
-});
 
 function handleTagInput(e) {
   if (e.key === 'Enter' || e.key === ',') {
@@ -1550,53 +1451,16 @@ async function saveMaterial() {
   const term = document.getElementById('f_term').value;
   const area = document.getElementById('f_area').value;
   const type = document.getElementById('f_type').value;
+  const url = document.getElementById('f_url').value.trim();
 
   if (!title) return toast("タイトルを入力してください", "error");
   if (!term) return toast("Termを設定してください（管理者設定から追加）", "error");
   if (!area) return toast("Areaを設定してください（管理者設定から追加）", "error");
-
-  let url = '', storagePath = '', fileName = '', fileSize = 0;
-
-  if (activeSourceTab === 'link') {
-    url = document.getElementById('f_url').value.trim();
-    if (!url) return toast("URLを入力してください", "error");
-    if (!/^https?:\/\//.test(url)) return toast("URLは http(s)://で始めてください", "error");
-  } else {
-    if (editingFile) {
-      // upload new file
-      try {
-        setSaving(true, "アップロード中…");
-        const ts = Date.now();
-        const safe = editingFile.name.replace(/[^\w.\-]+/g, '_');
-        const path = `materials/${currentUser.uid}/${ts}_${safe}`;
-        const ref = storage.ref(path);
-        await ref.put(editingFile);
-        url = await ref.getDownloadURL();
-        storagePath = path;
-        fileName = editingFile.name;
-        fileSize = editingFile.size;
-      } catch (err) {
-        setSaving(false);
-        return toast("アップロードに失敗しました: " + err.message, "error");
-      }
-    } else if (editingId) {
-      // keep existing file
-      const existing = materials.find(m => m.id === editingId);
-      if (existing && existing.storagePath) {
-        url = existing.url; storagePath = existing.storagePath;
-        fileName = existing.fileName; fileSize = existing.fileSize || 0;
-      } else {
-        setSaving(false);
-        return toast("ファイルを選択してください", "error");
-      }
-    } else {
-      return toast("ファイルを選択してください", "error");
-    }
-  }
+  if (!url) return toast("URLを入力してください", "error");
+  if (!/^https?:\/\//.test(url)) return toast("URLは http(s):// で始めてください", "error");
 
   const data = {
-    title, description: desc, term, area, type,
-    url, storagePath, fileName, fileSize,
+    title, description: desc, term, area, type, url,
     tags: editingTags,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
@@ -1657,16 +1521,14 @@ function openDetail(id) {
     ${m.description ? `<div class="detail-desc">${escapeHTML(m.description)}</div>` : ''}
     <div class="detail-link-block">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        ${m.storagePath
-          ? '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>'
-          : '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'}
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
       </svg>
       <div class="file-info">
-        <div class="name">${escapeHTML(m.fileName || (m.url ? new URL(m.url).hostname : ''))}</div>
+        <div class="name">${escapeHTML(m.url ? safeHostname(m.url) : '')}</div>
         <div class="url">${escapeHTML(m.url || '')}</div>
       </div>
       <a class="btn-primary" href="${escapeAttr(m.url)}" target="_blank" rel="noopener" style="text-decoration:none">
-        ${m.storagePath ? 'ダウンロード' : '開く'} →
+        開く →
       </a>
     </div>
     ${(m.tags || []).length ? `<div class="detail-tags">${m.tags.map(t => `<span class="tag">#${escapeHTML(t)}</span>`).join('')}</div>` : ''}
@@ -1687,11 +1549,7 @@ function closeDetailModal() { document.getElementById('detailModal').classList.r
 
 async function deleteMaterial(id) {
   if (!confirm('この資料を削除しますか？元に戻せません。')) return;
-  const m = materials.find(x => x.id === id);
   try {
-    if (m?.storagePath) {
-      try { await storage.ref(m.storagePath).delete(); } catch(e) { /* ignore */ }
-    }
     await db.collection('materials').doc(id).delete();
     closeDetailModal();
     toast("削除しました", "success");
@@ -1796,6 +1654,10 @@ function escapeHTML(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 function escapeAttr(s) { return escapeHTML(s).replace(/`/g, '&#96;'); }
+
+function safeHostname(url) {
+  try { return new URL(url).hostname; } catch(e) { return url; }
+}
 
 function formatDate(d) {
   const now = new Date();
